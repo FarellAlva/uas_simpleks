@@ -1,0 +1,555 @@
+/* ====================== RESULT BOX – INLINE DI ALUR DOKUMEN ====================== */
+.result-box {
+  /* Hilangkan posisi absolute/fixed */
+  position: static;
+  transform: none !important;
+  top: auto !important;
+  left: auto !important;
+
+  /* Margin vertikal agar ada spasi dari Back dan Footer, auto kiri-kanan untuk center */
+  margin: 2rem auto;
+
+  /* Gaya kotak putih */
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem 2rem;
+  text-align: center;
+
+  /* Lebar responsif */
+  max-width: 400px;
+  width: 90%;
+
+  /* Animasi masuk ringan (fade + scale) */
+  opacity: 0;
+  animation: fadeInScaleInline 0.4s ease-out forwards;
+}
+
+/* Keyframes animasi fade-in + scale (hanya memengaruhi opacity + scale, bukan positioning) */
+@keyframes fadeInScaleInline {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ====================== ISI DI DALAM .result-box ====================== */
+.result-box h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+}
+
+.result-box p {
+  font-size: 1rem;
+  color: #334155;
+  margin-bottom: 1.5rem;
+}
+
+.result-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.result-actions .btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.result-actions .btn:hover {
+  background-color: #1e40af;
+}
+
+/* ====================== DAFTAR PAKET SOAL ====================== */
+.packs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: var(--container-width, 900px);
+  margin-top: 1rem;
+}
+
+.pack-card {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pack-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pack-thumbnail {
+  flex-shrink: 0;
+  width: 80px;
+  height: 60px;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-placeholder {
+  width: 60px;
+  height: 40px;
+  background-color: #ddd;
+  border-radius: 3px;
+}
+
+.pack-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pack-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pack-title .icon {
+  color: #2563eb;
+  stroke-width: 2px;
+}
+
+.pack-meta {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.95rem;
+  color: #64748b;
+  align-items: center;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.meta-icon {
+  color: #2563eb;
+  stroke-width: 2px;
+}
+
+.try-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.try-btn:hover {
+  background-color: #1e40af;
+}
+
+/* ====================== HALAMAN QUIZ ====================== */
+.quiz-container {
+  width: 100%;
+  max-width: var(--container-width, 900px);
+  margin-top: 1rem;
+  position: relative;
+}
+
+.back-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.timer-display {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+.question-nav-full {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.nav-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  cursor: default;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-circle.answered {
+  background-color: #2563eb;
+  color: white;
+}
+
+.nav-circle.answered.active {
+  background-color: #1e40af;
+}
+
+.nav-circle.active {
+  background-color: #2563eb;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
+}
+
+.quiz-content-wrapper {
+  display: flex;
+  gap: 1rem;
+}
+
+/* ==== Kolom Soal ==== */
+.question-area {
+  flex: 2;
+}
+
+.question-box {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 420px;
+}
+
+.question-header {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+}
+
+.question-text {
+  font-size: 1.1rem;
+  color: #334155;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.option-item:hover:not(.disabled) {
+  border-color: #2563eb;
+  background-color: #eef2ff;
+}
+
+.option-item.selected {
+  border-color: #2563eb;
+  background-color: #eef2ff;
+}
+
+.option-item.correct-answer {
+  border-color: #22c55e;
+  background-color: #ecfdf5;
+  box-shadow: 0 0 0 1px #22c55e;
+}
+
+.option-item.wrong-answer {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+  box-shadow: 0 0 0 1px #ef4444;
+}
+
+.option-item input[type='radio'] {
+  accent-color: #2563eb;
+  transform: scale(1.1);
+  cursor: pointer;
+}
+
+.option-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.option-feedback-icon {
+  position: absolute;
+  right: 1rem;
+  font-size: 1.2rem;
+}
+.option-feedback-icon.correct {
+  color: #22c55e;
+}
+.option-feedback-icon.wrong {
+  color: #ef4444;
+}
+
+.quiz-actions-bottom {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  min-height: 50px;
+}
+
+.submit-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.submit-btn:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #1e40af;
+}
+
+.submit-feedback {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.solution-result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.solution-result.correct {
+  color: #22c55e;
+}
+
+.solution-result.wrong {
+  color: #ef4444;
+}
+
+.next-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.next-btn:hover {
+  background-color: #1e40af;
+}
+
+/* ==== Kolom Penjelasan ==== */
+.explanation-area {
+  flex: 1;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.explanation-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.1rem;
+  color: #64748b;
+  text-align: center;
+  padding: 2rem;
+  z-index: 2;
+  border-radius: 8px;
+}
+
+.explanation-content {
+  position: relative;
+  z-index: 1;
+  overflow-y: auto;
+}
+
+.explanation-content h4 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 0.75rem;
+}
+
+.solution-text {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #334155;
+}
+
+/* ====================== STYLING MODERN UNTUK TABEL SIMPLEX ====================== */
+.simplex-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 1rem;
+  color: #334155;
+}
+
+.simplex-table thead th {
+  background-color: #2563eb;
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+
+.simplex-table tbody td {
+  padding: 0.6rem 0.8rem;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.simplex-table tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.simplex-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.simplex-table td:first-child,
+.simplex-table th:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+}
+
+.simplex-table td:last-child,
+.simplex-table th:last-child {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+/* ==== RESPONSIF ==== */
+@media (max-width: 768px) {
+  .packs-list {
+    gap: 1rem;
+  }
+  .pack-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pack-thumbnail {
+    display: none;
+  }
+  .pack-info {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .try-btn {
+    width: 100%;
+  }
+  .quiz-container {
+    margin-top: 2rem;
+    padding: 0;
+  }
+  .quiz-content-wrapper {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .question-area,
+  .explanation-area {
+    width: 100%;
+    min-height: 300px;
+  }
+  .timer-display {
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .result-box {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 576px) {
+  .question-nav-full {
+    gap: 0.5rem;
+  }
+  .nav-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+}
