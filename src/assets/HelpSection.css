@@ -1,0 +1,168 @@
+/* HelpSection.css */
+
+/* Container keseluruhan */
+.help-section {
+  background-color: var(--background-color, #f9fafb);
+  padding: 2rem 1rem;
+}
+
+/* Header section */
+.section-header h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--dark-color, #1e293b);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Wrapper utama */
+.content-wrapper {
+  max-width: var(--container-width, 900px);
+  margin: 0 auto;
+}
+
+/* Container kartu-kartu bantuan */
+.help-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+/* ================== */
+/*   Style untuk kartu */
+/* ================== */
+.help-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  padding: 1.5rem;
+}
+
+/* Judul setiap kartu */
+.help-card .card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary-color, #2563eb);
+  margin-bottom: 1rem;
+}
+
+/* ----- Usage Card ----- */
+.usage-list {
+  list-style: decimal inside;
+  color: var(--text-color, #334155);
+  line-height: 1.6;
+}
+
+.usage-list li {
+  margin-bottom: 0.75rem;
+}
+
+/* ----- FAQ Card ----- */
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.accordion-item {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.accordion-item.expanded {
+  border-color: var(--primary-color, #2563eb);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background-color: var(--light-color, #f8fafc);
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--dark-color, #1e293b);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.accordion-header:hover {
+  background-color: var(--highlight-color, #eef2ff);
+}
+
+.accordion-header .question-text {
+  flex: 1;
+  text-align: left;
+}
+
+.accordion-header .icon-wrapper {
+  margin-left: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Konten jawaban (disembunyikan/p ditampilkan via JS) */
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  background-color: #ffffff;
+  padding: 0 1rem;
+}
+
+.accordion-item.expanded .accordion-content {
+  max-height: 500px; /* cukup besar agar muat konten */
+  padding: 1rem;
+}
+
+.faq-list {
+  padding-left: 1.25rem;
+  margin: 0;
+  color: var(--text-color, #334155);
+}
+
+.faq-list li {
+  margin-bottom: 0.5rem;
+}
+
+.faq-paragraph {
+  margin: 0;
+  color: var(--text-color, #334155);
+  line-height: 1.6;
+}
+
+/* ----- Terms Card ----- */
+.terms-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.term-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.term {
+  font-weight: 500;
+  color: var(--primary-color, #2563eb);
+  margin-bottom: 0.25rem;
+}
+
+.definition {
+  font-size: 0.95rem;
+  color: var(--text-color, #334155);
+  line-height: 1.5;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+  .terms-list {
+    grid-template-columns: 1fr;
+  }
+}

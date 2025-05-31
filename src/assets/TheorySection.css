@@ -1,0 +1,187 @@
+.content-section {
+  padding: 2rem 0;
+}
+
+.section-header h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+.tabs {
+  margin-top: 1rem;
+}
+
+.tab-headers {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.tab-header {
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s, color 0.2s;
+  color: #475569;
+}
+
+.tab-header:hover {
+  background-color: #f1f5f9;
+}
+
+.tab-header.active {
+  border-bottom: 3px solid #2563eb;
+  color: #2563eb;
+}
+
+.section-icon {
+
+  margin-right: 0.5rem;
+  color: #2563eb;
+}
+
+.tab-content {
+  display: none;
+  padding-top: 1.5rem;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Accordion */
+.theory-section {
+  margin-bottom: 1rem;
+}
+
+.accordion-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  background-color: #eef2ff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.accordion-toggle:hover {
+  background-color: #e0e7ff;
+}
+
+.chevron-icon {
+  color: #475569;
+}
+
+.section-body {
+  padding: 1rem 1.5rem;
+  background-color: #ffffff;
+  border-left: 4px solid #2563eb;
+  margin-top: 0.5rem;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Lists */
+.numbered-list {
+  padding-left: 1.2rem;
+  list-style-type: decimal;
+  margin-top: 0.5rem;
+}
+
+.bullet-list {
+  padding-left: 1.2rem;
+  list-style-type: disc;
+  margin-top: 0.25rem;
+}
+
+/* Kode / Pre */
+.code-block {
+  background-color: #f1f5f9;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+
+/* Tabel Simpleks */
+.simplex-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+}
+
+.simplex-table th,
+.simplex-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.simplex-table th {
+  background-color: #eef2ff;
+  font-weight: 600;
+}
+
+.simplex-table td {
+  background-color: #fafafa;
+}
+
+/* Tabel Dualitas */
+.duality-table {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.duality-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.duality-table th,
+.duality-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.duality-table th {
+  background-color: #eef2ff;
+  font-weight: 600;
+}
+
+/* Two‐column layout */
+.two-column {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.two-column .column {
+  flex: 1;
+  min-width: 240px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+/* Responsif */
+@media (max-width: 768px) {
+  .tab-headers {
+    flex-direction: column;
+    gap: 0;
+  }
+  .tab-header {
+    width: 100%;
+  }
+  .two-column {
+    flex-direction: column;
+  }
+}
