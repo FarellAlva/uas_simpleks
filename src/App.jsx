@@ -19,14 +19,22 @@ import HelpSection from './pages/HelpSection'
 export default function App() {
   // activePage: 'input' | 'solution' | 'theory' | 'examples' | 'help'
   const [activePage, setActivePage] = useState('input')
+  const [solutionData, setSolutionData] = useState(null)
+
+  const handleSolutionUpdate = (data) => {
+    setSolutionData(data)
+    if (data && data.success) {
+      setActivePage('solution') // Automatically switch to solution page when solved
+    }
+  }
 
   // Fungsi untuk merender konten halaman berdasarkan state
   const renderPage = () => {
     switch (activePage) {
       case 'input':
-        return <InputSection />
+        return <InputSection onSolutionUpdate={handleSolutionUpdate} />
       case 'solution':
-        return <SolutionSection />
+        return <SolutionSection solutionData={solutionData} />
       case 'theory':
         return <TheorySection />
       case 'examples':
@@ -34,7 +42,7 @@ export default function App() {
       case 'help':
         return <HelpSection />
       default:
-        return <InputSection />
+        return <InputSection onSolutionUpdate={handleSolutionUpdate} />
     }
   }
 
