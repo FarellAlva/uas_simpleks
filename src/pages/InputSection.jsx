@@ -1,4 +1,3 @@
-// src/pages/InputSection.jsx
 import React, { useState, useEffect } from 'react'
 import { SimplexSolver, sampleProblems } from '../utils/SimplexSolver'
 
@@ -83,7 +82,7 @@ export default function InputSection({ onSolutionUpdate }) {
       setShowForm(true);
     }, 100);
     
-    alert(`🎯 Contoh soal telah diisi!\n\n${sample.description}\n\nKlik "Selesaikan" untuk melihat proses penyelesaian langkah demi langkah dengan angka yang menarik!`);
+    alert(`🎯 Contoh soal telah diisi!\n\n${sample.description}Klik "Selesaikan" untuk melihat proses penyelesaian langkah demi langkah dengan angka yang menarik!`);
   }
 
   const isFormEmpty = () => {
@@ -309,16 +308,18 @@ export default function InputSection({ onSolutionUpdate }) {
                 <div id="objective-coefficients">
                   {objectiveCoefficients.map((coeff, idx) => (
                     <React.Fragment key={idx}>
-                      <input 
-                        type="number" 
-                        placeholder={`c${idx + 1}`} 
-                        value={coeff}
-                        onChange={(e) => handleObjectiveCoeffChange(idx, e.target.value)}
-                        step="any"
-                        style={{margin: '0 5px'}}
-                      />
-                      {idx < numVariables - 1 && <span>x{idx+1} + </span>}
-                      {idx === numVariables - 1 && <span>x{idx+1}</span>}
+                      <div className="objective-term"> {/* Menggunakan div dengan class objective-term */}
+                        <input 
+                          type="number" 
+                          placeholder={`c${idx + 1}`} 
+                          value={coeff}
+                          onChange={(e) => handleObjectiveCoeffChange(idx, e.target.value)}
+                          step="any"
+                          // style={{margin: '0 5px'}} <- Hapus inline style ini, biarkan CSS yang menangani
+                        />
+                        <span>x{idx+1}</span>
+                      </div>
+                      {idx < numVariables - 1 && <span className="plus-sign">+</span>} {/* Tambahkan operator '+' sebagai elemen terpisah */}
                     </React.Fragment>
                   ))}
                 </div>
@@ -329,25 +330,29 @@ export default function InputSection({ onSolutionUpdate }) {
               <h3>Batasan</h3>
               <div id="constraints-container">
                 {constraintsData.map((constraint, barisIdx) => (
-                  <div key={barisIdx} className="constraint-row" style={{margin: '10px 0', display: 'flex', alignItems: 'center', gap: '5px'}}>
-                    {constraint.coeffs.map((coeff, kolomIdx) => (
-                      <React.Fragment key={kolomIdx}>
-                        <input 
-                          type="number" 
-                          placeholder={`a${barisIdx + 1}${kolomIdx + 1}`} 
-                          value={coeff}
-                          onChange={(e) => handleConstraintCoeffChange(barisIdx, kolomIdx, e.target.value)}
-                          step="any"
-                          style={{width: '80px'}}
-                        />
-                        {kolomIdx < numVariables - 1 && <span>x{kolomIdx+1} + </span>}
-                        {kolomIdx === numVariables - 1 && <span>x{kolomIdx+1}</span>}
-                      </React.Fragment>
-                    ))}
+                  <div key={barisIdx} className="constraint-row"> {/* Hapus inline style, biarkan CSS yang menangani */}
+                    <div className="constraint-coefficients"> {/* Bungkus bagian koefisien dengan class ini */}
+                      {constraint.coeffs.map((coeff, kolomIdx) => (
+                        <React.Fragment key={kolomIdx}>
+                          <div className="constraint-term"> {/* Menggunakan div dengan class constraint-term */}
+                            <input 
+                              type="number" 
+                              placeholder={`a${barisIdx + 1}${kolomIdx + 1}`} 
+                              value={coeff}
+                              onChange={(e) => handleConstraintCoeffChange(barisIdx, kolomIdx, e.target.value)}
+                              step="any"
+                              // style={{width: '80px'}} <- Hapus inline style ini, biarkan CSS yang menangani
+                            />
+                            <span>x{kolomIdx+1}</span>
+                          </div>
+                          {kolomIdx < numVariables - 1 && <span className="plus-sign">+</span>} {/* Tambahkan operator '+' sebagai elemen terpisah */}
+                        </React.Fragment>
+                      ))}
+                    </div>
                     <select 
                       value={constraint.sign} 
                       onChange={(e) => handleConstraintSignChange(barisIdx, e.target.value)}
-                      style={{margin: '0 10px'}}
+                      // style={{margin: '0 10px'}} <- Hapus inline style ini, biarkan CSS yang menangani
                     >
                       <option value="≤">≤</option>
                       <option value="=">=</option>
@@ -359,7 +364,7 @@ export default function InputSection({ onSolutionUpdate }) {
                       value={constraint.rhs}
                       onChange={(e) => handleConstraintRhsChange(barisIdx, e.target.value)}
                       step="any"
-                      style={{width: '80px'}}
+                      // style={{width: '80px'}} <- Hapus inline style ini, biarkan CSS yang menangani
                     />
                   </div>
                 ))}
