@@ -1,105 +1,185 @@
-import { BaseSimplex } from './BaseSimplex.js';
+// File: DualSimplex.js
+
+import { BaseSimplex } from './BaseSimplex.js'
 
 export class DualSimplex extends BaseSimplex {
   constructor(problemData, originalObjectiveCoefficients) {
-    super(problemData, originalObjectiveCoefficients);
+    super(problemData, originalObjectiveCoefficients)
   }
 
   solve() {
-    this.initializeTableau();
-    this.iteration = 0;
-    this.logStep('Tabel awal simpleks dual', -1, -1, '', '');
+    // 1) Inisialisasi tableau (sudah termasuk Big-M, artificial, dll)
+    this.initializeTableau()
+    this.iteration = 0
+    this.logStep('Tabel awal dual simpleks (fase Big-M)', -1, -1, '', '')
 
-    // Check dual feasibility
-    const objRow = this.tableau[this.tableau.length - 1];
-    for (let j = 0; j < objRow.length - 1; j++) {
-      if (objRow[j] > 1e-9) {
-        this.isInfeasible = true;
-        this.logStep('Kondisi awal dual tidak terpenuhi', -1, -1, '', '');
-        return this.generateSolutionOutput('dual');
-      }
-    }
+    // 2) Loop utamanya
+    while (
+      !this.isOptimal &&
+      !this.isUnbounded &&
+      !this.isInfeasible &&
+      this.iteration < 200
+    ) {
+      // 2.a) Cari baris paling infeasible (RHS < 0 terbesar absolutnya)
+      const pivotRow = this.findMostInfeasibleRow()
 
-    while (!this.isOptimal && !this.isInfeasible && this.iteration < 100) {
-      this.iteration++;
-
-      const pivotRow = this.findPivotRow();
+      // 2.b) Jika tidak ada RHS < 0 ➔ semua constraint baris feasible
       if (pivotRow === -1) {
-        this.isOptimal = true;
-        this.logStep('Solusi optimal dual tercapai', -1, -1, '', '');
-        break;
+        // Tapi sebelum klaim optimal, periksa apakah baris fungsi tujuan
+        // sudah “optimal” (tidak ada cost > 0)
+        const pivotColPrimal = this.findPivotColumn()
+
+        if (pivotColPrimal === -1) {
+          // Tidak ada koef > 0 di baris tujuan ➔ benar-benar optimal
+          this.isOptimal = true
+          this.logStep('Solusi optimal tercapai (dual)', -1, -1, '', '')
+          break
+        } else {
+          // Masih ada cost positif akibat Big-M → lakukan pivot ala Primal
+          const pivotRowPrimal = this.findPivotRow(pivotColPrimal)
+          if (pivotRowPrimal === -1) {
+            // Jika tidak ada baris untuk pivot ➔ unbounded
+            this.isUnbounded = true
+            const enteringVar = this.getVariableName(pivotColPrimal)
+            this.logStep(
+              'Solusi tidak terbatas (dual→primal)',
+              pivotColPrimal,
+              -1,
+              enteringVar,
+              ''
+            )
+            break
+          }
+
+          // Lakukan pivot (primal style) untuk “membersihkan” cost positif
+          const enteringVar = this.getVariableName(pivotColPrimal)
+          const leavingVar = this.basicVariables[pivotRowPrimal]
+          this.iteration++
+          this.logStep(
+            `(Dual→Primal) Iterasi ${this.iteration}: ${enteringVar} masuk, ${leavingVar} keluar`,
+            pivotColPrimal,
+            pivotRowPrimal,
+            enteringVar,
+            leavingVar
+          )
+          this.pivot(pivotRowPrimal, pivotColPrimal)
+          this.basicVariables[pivotRowPrimal] = enteringVar
+
+          // Lanjutkan loop (cek infeasible lagi di iterasi berikutnya)
+          continue
+        }
       }
 
-      const pivotCol = this.findPivotColumn(pivotRow);
+      // 2.c) Jika masih ada RHS negatif, lanjut dual simplex biasa:
+      const pivotCol = this.findDualPivotColumn(pivotRow)
       if (pivotCol === -1) {
-        this.isInfeasible = true;
-        const leavingVar = this.basicVariables[pivotRow];
-        this.logStep(`Masalah tidak layak untuk ${leavingVar}`, -1, pivotRow, '', leavingVar);
-        break;
+        // Tidak ada koef yang memenuhi aturan dual ➔ unbounded
+        this.isUnbounded = true
+        this.logStep('Solusi tidak terbatas (dual)', -1, -1, '', '')
+        break
       }
 
-      const enteringVar = this.getVariableName(pivotCol);
-      const leavingVar = this.basicVariables[pivotRow];
-
+      // Catat variabel masuk/keluar
+      const enteringVar = this.getVariableName(pivotCol)
+      const leavingVar = this.basicVariables[pivotRow]
+      this.iteration++
       this.logStep(
-        `Iterasi Dual ${this.iteration}: ${leavingVar} keluar, ${enteringVar} masuk`,
-        pivotCol, pivotRow, enteringVar, leavingVar
-      );
+        `Iterasi ${this.iteration} (dual): ${enteringVar} masuk, ${leavingVar} keluar`,
+        pivotCol,
+        pivotRow,
+        enteringVar,
+        leavingVar
+      )
 
-      this.pivot(pivotRow, pivotCol);
-      this.basicVariables[pivotRow] = enteringVar;
+      // 2.d) Pivot dan update basis
+      this.pivot(pivotRow, pivotCol)
+      this.basicVariables[pivotRow] = enteringVar
     }
 
-    if (this.iteration >= 100 && !this.isOptimal && !this.isInfeasible) {
-      this.isInfeasible = true;
-      this.logStep('Iterasi maksimum dual tercapai', -1, -1, '', '');
+    // 3) Jika melebihi iterasi maksimum tanpa status valid ➔ tandai infeasible
+    if (
+      this.iteration >= 200 &&
+      !this.isOptimal &&
+      !this.isUnbounded &&
+      !this.isInfeasible
+    ) {
+      this.isInfeasible = true
+      this.logStep('Iterasi maksimum tercapai (dual)', -1, -1, '', '')
     }
 
-    // Add final step if needed
-    if (this.steps.length > 0) {
-      const lastStep = this.steps[this.steps.length - 1];
-      if (this.isOptimal && !lastStep.description.includes('optimal')) {
-        this.iteration++;
-        this.logStep('Solusi optimal dual tercapai', -1, -1, '', '');
-      }
-    }
-
-    return this.generateSolutionOutput('dual');
+    return this.generateSolutionOutput('dual')
   }
 
-  // Find pivot row for dual method
-  findPivotRow() {
-    let minRhs = -1e-9;
-    let pivotRow = -1;
-    
+  // Temukan baris paling infeasible (RHS < 0 dengan |RHS| terbesar)
+  findMostInfeasibleRow() {
+    let worstVal = 0
+    let pivotRow = -1
     for (let i = 0; i < this.tableau.length - 1; i++) {
-      const rhs = this.tableau[i][this.tableau[i].length - 1];
-      if (rhs < minRhs) {
-        minRhs = rhs;
-        pivotRow = i;
+      const rhs = this.tableau[i][this.tableau[0].length - 1]
+      if (rhs < worstVal) {
+        worstVal = rhs
+        pivotRow = i
       }
     }
-    return pivotRow;
+    return pivotRow
   }
 
-  // Find pivot column for dual method
-  findPivotColumn(pivotRow) {
-    const objRow = this.tableau[this.tableau.length - 1];
-    let minRatio = Infinity;
-    let pivotCol = -1;
+  // Temukan pivot column untuk dual simplex: 
+  // Cari j sehingga tableau[pivotRow][j] < 0 dan rasio |c_j / a_{pivotRow,j}| paling kecil
+  findDualPivotColumn(pivotRow) {
+    const objRow = this.tableau[this.tableau.length - 1]
+    let minRatio = Infinity
+    let pivotCol = -1
 
     for (let j = 0; j < objRow.length - 1; j++) {
-      const elementInPivotRow = this.tableau[pivotRow][j];
-      const objCoeff = objRow[j];
-
-      if (elementInPivotRow < -1e-9) {
-        const ratio = Math.abs(objCoeff / elementInPivotRow);
+      const aij = this.tableau[pivotRow][j]
+      if (aij < -1e-9) {
+        const ratio = Math.abs(objRow[j] / aij)
         if (ratio < minRatio) {
-          minRatio = ratio;
-          pivotCol = j;
+          minRatio = ratio
+          pivotCol = j
         }
       }
     }
-    return pivotCol;
+    return pivotCol
+  }
+
+  // ---------------------------
+  // Berikut dua method “Primal‐like”
+  // yang kita pakai ketika cost masih positif
+  // ---------------------------
+
+  // Temukan pivot column (primal): cari cost coefficient > 0 terbesar
+  findPivotColumn() {
+    const objRow = this.tableau[this.tableau.length - 1]
+    let maxCoeff = 1e-9
+    let pivotCol = -1
+
+    for (let j = 0; j < objRow.length - 1; j++) {
+      if (objRow[j] > maxCoeff) {
+        maxCoeff = objRow[j]
+        pivotCol = j
+      }
+    }
+    return pivotCol
+  }
+
+  // Temukan pivot row (primal): rasio rhs / a_{i,j} terkecil untuk a_{i,j} > 0
+  findPivotRow(pivotCol) {
+    let minRatio = Infinity
+    let pivotRow = -1
+
+    for (let i = 0; i < this.tableau.length - 1; i++) {
+      const aij = this.tableau[i][pivotCol]
+      const rhs = this.tableau[i][this.tableau[0].length - 1]
+      if (aij > 1e-9) {
+        const ratio = rhs / aij
+        if (ratio >= -1e-9 && ratio < minRatio) {
+          minRatio = ratio
+          pivotRow = i
+        }
+      }
+    }
+    return pivotRow
   }
 }
