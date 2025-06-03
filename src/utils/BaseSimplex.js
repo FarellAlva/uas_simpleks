@@ -241,7 +241,7 @@ export class BaseSimplex {
     // Handle objective value based on problem type
     if (this.problemData.objectiveType === 'min') {
       // For minimization: the tableau shows -Z, so negate to get actual minimum value
-      solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : -objValTable;
+      solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : objValTable;
     } else {
       // For maximization: negate tableau value to get actual maximum
       solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : -objValTable;
