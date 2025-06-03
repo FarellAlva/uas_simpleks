@@ -237,9 +237,9 @@ export class BaseSimplex {
     // tapi Big-M juga memperhitungkan artifisial. Karena di akhir
     // artifisial sudah hilang (seharusnya 0), maka:
     if (this.problemData.objectiveType === 'min') {
-      solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : -objValTable;
-    } else {
       solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : objValTable;
+    } else {
+      solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : -objValTable;
     }
 
     return solution;

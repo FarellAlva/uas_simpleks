@@ -44,17 +44,21 @@ export default function SolutionSection({ solutionData }) {
   const renderTableau = (tableau, basicVars, pivotRow, pivotCol) => {
     if (!tableau || tableau.length === 0) return null
 
-    const numVars = tableau[0].length - 1
+    const numVars = tableau[0].length 
     const headers = []
     
     // Generate headers for variables and slack variables
-    for (let i = 0; i < numVars; i++) {
-      if (i < solutionData.finalSolution?.variables ? Object.keys(solutionData.finalSolution.variables).length : numVars - tableau.length + 1) {
-        headers.push(`x${i + 1}`)
-      } else {
-        headers.push(`s${i - (numVars - tableau.length + 1) + 1}`)
-      }
+    // Add headers for original variables (x1, x2, x3, etc)
+    for (let i = 1; i <= numVars - tableau.length; i++) {
+      headers.push(`x${i}`)
     }
+    
+    // Add headers for slack variables (s1, s2, etc)
+    for (let i = 1; i < tableau.length; i++) {
+      headers.push(`s${i}`)
+    }
+    
+    // Add RHS column header
     headers.push('RHS')
 
     return (
@@ -103,7 +107,7 @@ export default function SolutionSection({ solutionData }) {
                 }}>
                   {rowIdx < tableau.length - 1 ? 
                    (basicVars ? basicVars[rowIdx] : `s${rowIdx + 1}`) : 
-                   'Z'}
+                   '- Z'}
                 </td>
                 {row.map((cell, cellIdx) => (
                   <td key={cellIdx} style={{
@@ -117,7 +121,7 @@ export default function SolutionSection({ solutionData }) {
                     color: rowIdx === pivotRow && cellIdx === pivotCol ? 'white' : 'inherit',
                     fontWeight: rowIdx === pivotRow && cellIdx === pivotCol ? 'bold' : 'normal'
                   }}>
-                    {typeof cell === 'number' ? parseFloat(cell.toFixed(3)) : cell}
+                   {typeof cell === 'number' ? parseFloat(cell.toFixed(3)) : cell}
                   </td>
                 ))}
               </tr>
