@@ -44,25 +44,70 @@ export default function SolutionSection({ solutionData }) {
   const renderTableau = (tableau, basicVars, pivotRow, pivotCol) => {
     if (!tableau || tableau.length === 0) return null
 
-    const numVars = tableau[0].length 
     const headers = []
     
-    // Generate headers for variables and slack variables
-    // Add headers for original variables (x1, x2, x3, etc)
-    for (let i = 1; i <= numVars - tableau.length; i++) {
-      headers.push(`x${i}`)
-    }
-    
-    // Add headers for slack variables (s1, s2, etc)
-    for (let i = 1; i < tableau.length; i++) {
-      headers.push(`s${i}`)
+    // Generate headers in proper order: x1, x2, ..., s1, s2, ..., a1, a2, ..., RHS
+    if (solutionData) {
+      // Add decision variables (x1, x2, ...)
+      for (let i = 1; i <= solutionData.numVariables; i++) {
+        headers.push(`x${i}`)
+      }
+      
+      // Add slack variables (s1, s2, ...)
+      for (let i = 1; i <= (solutionData.numSlack || 0); i++) {
+        headers.push(`s${i}`)
+      }
+      
+      // Add surplus variables if any
+      for (let i = 1; i <= (solutionData.numSurplus || 0); i++) {
+        headers.push(`s${i}`)
+      }
+      
+      // Add artificial variables (a1, a2, ...)
+      for (let i = 1; i <= (solutionData.numArtificial || 0); i++) {
+        headers.push(`a${i}`)
+      }
     }
     
     // Add RHS column header
     headers.push('RHS')
 
+    // Check if this is a minimization problem
+    const isMinimization = solutionData && solutionData.objectiveType === 'min'
+    
+    // For minimization, we want to show the original coefficients (not negated)
+    const displayTableau = tableau.map(row => [...row])
+    
+    if (isMinimization && displayTableau.length > 0) {
+      const objRowIndex = displayTableau.length - 1
+      
+      // Show original objective coefficients for decision variables
+      if (solutionData.originalObjectiveCoefficients) {
+        for (let j = 0; j < Math.min(solutionData.numVariables, solutionData.originalObjectiveCoefficients.length); j++) {
+          displayTableau[objRowIndex][j] = solutionData.originalObjectiveCoefficients[j]
+        }
+      }
+      
+      // For minimization, negate the objective value to show the actual minimum value
+      const rhsIndex = displayTableau[objRowIndex].length - 1
+      displayTableau[objRowIndex][rhsIndex] = -displayTableau[objRowIndex][rhsIndex]
+    }
+
     return (
       <div style={{overflowX: 'auto'}}>
+        {/* Show problem type indicator */}
+        <div style={{
+          marginBottom: '10px',
+          padding: '8px 12px',
+          backgroundColor: isMinimization ? '#e3f2fd' : '#f3e5f5',
+          borderRadius: '4px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          color: isMinimization ? '#1976d2' : '#7b1fa2'
+        }}>
+          {isMinimization ? '📉 Masalah Minimisasi' : '📈 Masalah Maksimisasi'}
+        </div>
+        
         <table className="simplex-tableau" style={{
           width: '100%',
           borderCollapse: 'collapse',
@@ -94,40 +139,140 @@ export default function SolutionSection({ solutionData }) {
             </tr>
           </thead>
           <tbody>
-            {tableau.map((row, rowIdx) => (
-              <tr key={rowIdx} style={{
-                backgroundColor: rowIdx === pivotRow ? '#e3f2fd' : 
-                               rowIdx === tableau.length - 1 ? '#f3e5f5' : 'white'
-              }}>
-                <td style={{
-                  padding: '10px',
-                  borderBottom: '1px solid #eee',
-                  fontWeight: 'bold',
-                  backgroundColor: '#fafafa'
+            {displayTableau.map((row, rowIdx) => {
+              const isObjectiveRow = rowIdx === displayTableau.length - 1
+              const objectiveLabel = isMinimization ? 'Z' : '- Z'
+              
+              return (
+                <tr key={rowIdx} style={{
+                  backgroundColor: rowIdx === pivotRow ? '#e3f2fd' : 
+                                 isObjectiveRow ? (isMinimization ? '#e8f5e8' : '#f3e5f5') : 'white'
                 }}>
-                  {rowIdx < tableau.length - 1 ? 
-                   (basicVars ? basicVars[rowIdx] : `s${rowIdx + 1}`) : 
-                   '- Z'}
-                </td>
-                {row.map((cell, cellIdx) => (
-                  <td key={cellIdx} style={{
+                  <td style={{
                     padding: '10px',
                     borderBottom: '1px solid #eee',
-                    textAlign: 'center',
-                    backgroundColor: 
-                      rowIdx === pivotRow && cellIdx === pivotCol ? '#ff5722' :
-                      rowIdx === pivotRow ? '#e3f2fd' :
-                      cellIdx === pivotCol ? '#fff3e0' : 'inherit',
-                    color: rowIdx === pivotRow && cellIdx === pivotCol ? 'white' : 'inherit',
-                    fontWeight: rowIdx === pivotRow && cellIdx === pivotCol ? 'bold' : 'normal'
+                    fontWeight: 'bold',
+                    backgroundColor: '#fafafa'
                   }}>
-                   {typeof cell === 'number' ? parseFloat(cell.toFixed(3)) : cell}
+                    {isObjectiveRow ? objectiveLabel : 
+                     (basicVars ? basicVars[rowIdx] : `s${rowIdx + 1}`)}
                   </td>
-                ))}
-              </tr>
-            ))}
+                  {row.map((cell, cellIdx) => {
+                    // For minimization objective row, highlight decision variables differently
+                    const isDecisionVarInObj = isObjectiveRow && isMinimization && cellIdx < solutionData.numVariables
+                    
+                    return (
+                      <td key={cellIdx} style={{
+                        padding: '10px',
+                        borderBottom: '1px solid #eee',
+                        textAlign: 'center',
+                        backgroundColor: 
+                          rowIdx === pivotRow && cellIdx === pivotCol ? '#ff5722' :
+                          rowIdx === pivotRow ? '#e3f2fd' :
+                          cellIdx === pivotCol ? '#fff3e0' : 
+                          isDecisionVarInObj ? '#c8e6c9' : 'inherit',
+                        color: rowIdx === pivotRow && cellIdx === pivotCol ? 'white' : 
+                               isDecisionVarInObj ? '#2e7d32' : 'inherit',
+                        fontWeight: (rowIdx === pivotRow && cellIdx === pivotCol) || isDecisionVarInObj ? 'bold' : 'normal'
+                      }}>
+                       {typeof cell === 'number' ? parseFloat(cell.toFixed(3)) : cell}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
+        
+        {/* Show explanation for minimization */}
+        {isMinimization && (
+          <div style={{
+            marginTop: '10px',
+            padding: '8px 12px',
+            backgroundColor: '#f0f4c3',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#558b2f'
+          }}>
+            💡 <strong>Catatan:</strong> Untuk minimisasi, koefisien fungsi tujuan ditampilkan dalam bentuk asli. 
+            Nilai Z menunjukkan nilai minimum yang dicapai.
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderProblemFormulation = () => {
+    if (!solutionData || !solutionData.originalObjectiveCoefficients || !solutionData.constraints) {
+      return null
+    }
+
+    const { objectiveType, originalObjectiveCoefficients, numVariables, constraints } = solutionData
+
+    return (
+      <div style={{
+        backgroundColor: '#f8f9fa',
+        padding: '20px',
+        borderRadius: '8px',
+        border: '1px solid #dee2e6',
+        marginBottom: '20px',
+        fontFamily: 'monospace'
+      }}>
+        <h4 style={{
+          margin: '0 0 15px 0',
+          color: '#495057',
+          fontSize: '16px',
+          fontWeight: 'bold'
+        }}>
+          📝 Formulasi Masalah
+        </h4>
+        
+        {/* Objective Function */}
+        <div style={{ marginBottom: '15px' }}>
+          <span style={{ fontWeight: 'bold', color: objectiveType === 'min' ? '#1976d2' : '#7b1fa2' }}>
+            {objectiveType === 'min' ? 'Minimize' : 'Maximize'}: 
+          </span>
+          <span style={{ marginLeft: '10px', fontSize: '16px' }}>
+            Z = {originalObjectiveCoefficients && originalObjectiveCoefficients.length > 0 ? 
+              originalObjectiveCoefficients.map((coeff, index) => {
+                const sign = index === 0 ? '' : coeff >= 0 ? ' + ' : ' - '
+                const absCoeff = Math.abs(coeff)
+                const displayCoeff = absCoeff === 1 ? '' : absCoeff
+                return `${sign}${displayCoeff}x${index + 1}`
+              }).join('') : 'Tidak tersedia'
+            }
+          </span>
+        </div>
+
+        {/* Constraints */}
+        <div>
+          <span style={{ fontWeight: 'bold', color: '#495057' }}>Subject to:</span>
+          <div style={{ marginLeft: '20px', marginTop: '8px' }}>
+            {constraints && constraints.length > 0 ? 
+              constraints.map((constraint, index) => (
+                <div key={index} style={{ marginBottom: '5px', fontSize: '15px' }}>
+                  {constraint.coeffs && constraint.coeffs.length > 0 ? 
+                    constraint.coeffs.map((coeff, varIndex) => {
+                      const sign = varIndex === 0 ? '' : coeff >= 0 ? ' + ' : ' - '
+                      const absCoeff = Math.abs(coeff)
+                      const displayCoeff = absCoeff === 1 ? '' : absCoeff
+                      return `${sign}${displayCoeff}x${varIndex + 1}`
+                    }).join('') : 'Koefisien tidak tersedia'
+                  } {constraint.sign || '='} {constraint.rhs !== undefined ? constraint.rhs : '0'}
+                </div>
+              )) : 
+              <div style={{ fontSize: '15px', color: '#6c757d', fontStyle: 'italic' }}>
+                Batasan tidak tersedia
+              </div>
+            }
+            {numVariables && numVariables > 0 && (
+              <div style={{ marginTop: '10px', fontSize: '14px', color: '#6c757d' }}>
+                {Array.from({ length: numVariables }, (_, i) => `x${i + 1}`).join(', ')} ≥ 0
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     )
   }
@@ -269,6 +414,10 @@ export default function SolutionSection({ solutionData }) {
 
           <div className="tableau-container">
             <h3 style={{marginBottom: '15px', color: '#333'}}>📊 Tabel Simpleks</h3>
+            
+            {/* Add problem formulation display */}
+            {renderProblemFormulation()}
+            
             <div id="tableau-wrapper" className="tableau-wrapper">
               {currentStepData ? 
                 renderTableau(
@@ -308,6 +457,7 @@ export default function SolutionSection({ solutionData }) {
               <div id="iteration-details" className="panel-content">
                 {[
                   {label: 'Iterasi ke:', value: currentStepData ? currentStepData.iteration : '-'},
+                  {label: 'Big M:', value: solutionData ? solutionData.bigM : '-'},
                   {label: 'Variabel Masuk:', value: currentStepData ? currentStepData.enteringVariable || '-' : '-'},
                   {label: 'Variabel Keluar:', value: currentStepData ? currentStepData.leavingVariable || '-' : '-'},
                   {label: 'Elemen Pivot:', value: currentStepData && currentStepData.pivotElement ? parseFloat(currentStepData.pivotElement.toFixed(3)) : '-'}
