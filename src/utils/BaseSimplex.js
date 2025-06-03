@@ -13,7 +13,7 @@ export class BaseSimplex {
     this.iteration = 0;
 
     // Untuk Big-M, kita gunakan nilai M yang sangat besar
-    this.M = 1e6;
+    this.M = Math.ceil(1e3);
   }
 
   // Membuat nama variabel: x1..xn, s1.., a1..
@@ -210,7 +210,7 @@ export class BaseSimplex {
 
   // Ekstrak solusi akhir (asumsi sudah optimal atau unbounded)
   extractSolution() {
-    const solution = { objectiveValue: 0, variables: {} };
+    const solution = { objectiveValue: 0, variables: {}, optimalBasis: {} };
     const { numVariables } = this.problemData;
 
     // Inisialisasi semua x₁..xₙ = 0
@@ -218,13 +218,18 @@ export class BaseSimplex {
       solution.variables[`x${i + 1}`] = 0;
     }
 
-    // Baca nilai basic variables (hanya yang berawalan x)
+    // Ekstrak optimal basis - variabel yang ada di basis dan nilainya
     for (let i = 0; i < this.tableau.length - 1; i++) {
       const basicVar = this.basicVariables[i];
+      const value = this.tableau[i][this.tableau[i].length - 1];
+      const cleanValue = Math.abs(value) < 1e-9 ? 0 : value;
+      
+      // Masukkan ke optimal basis (semua variabel basis)
+      solution.optimalBasis[basicVar] = cleanValue;
+      
+      // Jika variabel keputusan, masukkan juga ke variables
       if (basicVar.startsWith('x')) {
-        const idx = this.getIndexOfVar(basicVar);
-        const val = this.tableau[i][this.tableau[i].length - 1];
-        solution.variables[basicVar] = Math.abs(val) < 1e-9 ? 0 : val;
+        solution.variables[basicVar] = cleanValue;
       }
     }
 
@@ -233,13 +238,13 @@ export class BaseSimplex {
       this.tableau[0].length - 1
     ];
 
-    // Jika awalnya minimisasi, kita sudah meng‐negasi koefisien,
-    // tapi Big-M juga memperhitungkan artifisial. Karena di akhir
-    // artifisial sudah hilang (seharusnya 0), maka:
+    // Handle objective value based on problem type
     if (this.problemData.objectiveType === 'min') {
+      // For minimization: the tableau shows -Z, so negate to get actual minimum value
       solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : -objValTable;
     } else {
-      solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : objValTable;
+      // For maximization: negate tableau value to get actual maximum
+      solution.objectiveValue = Math.abs(objValTable) < 1e-9 ? 0 : -objValTable;
     }
 
     return solution;
@@ -260,10 +265,16 @@ export class BaseSimplex {
       isInfeasible: this.isInfeasible,
       numVariables: this.problemData.numVariables,
       numConstraints: this.problemData.numConstraints,
+      numSlack: this.problemData.numSlack || 0,
+      numSurplus: this.problemData.numSurplus || 0,
+      numArtificial: this.problemData.numArtificial || 0,
+      bigM: this.M,
       objectiveType: this.problemData.objectiveType,
-      originalObjectiveCoefficients: this.originalObjectiveCoefficients
+      originalObjectiveCoefficients: this.originalObjectiveCoefficients,
+      constraints: this.problemData.constraints || []
     };
   }
+
 
   copyTableau() {
     return this.tableau.map((row) => [...row]);
