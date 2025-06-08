@@ -12,157 +12,127 @@ export class BaseSimplex {
     this.isInfeasible = false;
     this.iteration = 0;
 
-    // Untuk Big-M, kita gunakan nilai M yang sangat besar
-    this.M = Math.ceil(1e3);
-  }
-
-  // Membuat nama variabel: x1..xn, s1.., a1..
-  getVariableName(index) {
-    return index < this.problemData.numVariables
-      ? `x${index + 1}`
-      : index < this.problemData.numVariables + this.problemData.numSlack
-      ? `s${index - this.problemData.numVariables + 1}`
-      : `a${index - this.problemData.numVariables - this.problemData.numSlack + 1}`;
-  }
-
-  // Inisialisasi tableau (termasuk variabel slack, surplus, artifisial)
-  initializeTableau() {
-    const {
-      objectiveCoefficients,
-      constraints,
-      numVariables,
-      numConstraints,
-      objectiveType
-    } = this.problemData;
-
-    // Hitung berapa variabel slack (≤) dan surplus (≥) / artifisial (= atau ≥)
-    let slackCount = 0;
-    let surplusCount = 0;
-    let artificialCount = 0;
-
-    constraints.forEach((c) => {
-      if (c.sign === '≤') {
-        slackCount += 1;
-      } else if (c.sign === '≥') {
-        surplusCount += 1;
-        artificialCount += 1;
-      } else if (c.sign === '=') {
-        artificialCount += 1;
-      }
-    });
-
-    // Simpan jumlah variabel tambahan
-    this.problemData.numSlack = slackCount;
-    this.problemData.numSurplus = surplusCount;
-    this.problemData.numArtificial = artificialCount;
-
-    // Total kolom (tanpa RHS): var asli + slack + surplus + artificial
-    const totalVars = numVariables + slackCount + surplusCount + artificialCount;
-
-    // Reset tableau dan basicVariables
-    this.tableau = [];
-    this.basicVariables = [];
-
-    // Indeks untuk menempatkan kolom-kolom tambahan
-    let idxSlack = numVariables;
-    let idxSurplus = numVariables + slackCount;
-    let idxArtificial = numVariables + slackCount + surplusCount;
-
-    // 1) Bangun baris‐baris constraint
-    constraints.forEach((constraint, i) => {
-      // Buat satu baris awal dengan semua koef 0
-      const row = Array(totalVars + 1).fill(0); // +1 untuk RHS
-
-      // 1.a) Masukkan koefisien variabel keputusan (x1..xn)
-      for (let j = 0; j < numVariables; j++) {
-        row[j] = constraint.coeffs[j];
-      }
-
-      // 1.b) Tambahkan slack, surplus, artifisial sesuai tanda
-      if (constraint.sign === '≤') {
-        // Slack +1
-        row[idxSlack] = 1;
-        this.basicVariables.push(this.getVariableName(idxSlack));
-        idxSlack += 1;
-      } else if (constraint.sign === '≥') {
-        // Surplus −1 + Artifisial +1
-        row[idxSurplus] = -1;
-        row[idxArtificial] = 1;
-        this.basicVariables.push(this.getVariableName(idxArtificial));
-        idxSurplus += 1;
-        idxArtificial += 1;
-      } else if (constraint.sign === '=') {
-        // Sama dengan: langsung artifisial +1
-        row[idxArtificial] = 1;
-        this.basicVariables.push(this.getVariableName(idxArtificial));
-        idxArtificial += 1;
-      }
-
-      // 1.c) Masukkan nilai RHS
-      row[totalVars] = constraint.rhs;
-
-      this.tableau.push(row);
-    });
-
-    // 2) Bangun baris fungsi tujuan (Big-M)
-    //    Kita bikin satu row dengan panjang totalVars+1, lalu isi dengan:
-    //      • Untuk kolom xj: koefisien (sudah ditegur +1 kalau max, -1 kalau min)
-    //      • Untuk setiap kolom artifisial: −M (karena kita maksimasi)
-    //      • Sisanya 0, dan RHS 0
-    const objRow = Array(totalVars + 1).fill(0);
-
-    // 2.a) Koefisien variabel keputusan (x1..xn)
-    for (let j = 0; j < numVariables; j++) {
-      // Jika objectiveType = 'min', koef sudah di-negasi di SimplexSolver sebelum sampai sini
-      objRow[j] = objectiveCoefficients[j];
-    }
-
-    // 2.b) Koefisien untuk variabel slack/surplus = 0 (tetap 0)
-
-    // 2.c) Koefisien untuk setiap variabel artifisial: −M 
-    let mulaiArt = numVariables + slackCount + surplusCount;
-    for (let k = 0; k < artificialCount; k++) {
-      objRow[mulaiArt + k] = -this.M;
-    }
-
-    // 2.d) RHS = 0
-    objRow[totalVars] = 0;
-
-    this.tableau.push(objRow);
-
-    // Setelah inisialisasi, kita juga perlu meng‐adjust baris tujuan
-    // supaya setiap artifisial yang ada di basis awal “didorong” ke nol:
-    // Caranya: untuk tiap baris constraint yang punya artifisial di basis,
-    // kita tambahkan M × (baris constraint) ke baris tujuan.
-    // Dengan demikian kolom artifisial akan jadi nol di baris tujuan.
-    for (let i = 0; i < this.tableau.length - 1; i++) {
-      const basicVar = this.basicVariables[i];
-      if (basicVar.startsWith('a')) {
-        // Jika ini variabel artifisial, cari indeks kolomnya:
-        const artIndex = this.getIndexOfVar(basicVar);
-        const factor = this.M;
-        // Tambahkan factor × baris i ke baris tujuan
-        for (let j = 0; j < this.tableau[i].length; j++) {
-          this.tableau[this.tableau.length - 1][j] += factor * this.tableau[i][j];
-        }
-      }
-    }
+    // Use a round BigM value for cleaner display
+    const sumCoeffs = this.problemData.objectiveCoefficients
+      .reduce((sum, c) => sum + Math.abs(c), 0);
+    this.M = Math.max(sumCoeffs * 10, 1000000); // Minimum 1,000,000 for cleaner display
   }
 
   // Membantu mencari indeks kolom dari nama variabel (x1, s2, a3, dll)
   getIndexOfVar(varName) {
-    // Kita iterasi seluruh kolom di baris 0 (kecuali RHS)
-    const headerCount = this.problemData.numVariables
-      + this.problemData.numSlack
-      + this.problemData.numSurplus
-      + this.problemData.numArtificial;
-    for (let col = 0; col < headerCount; col++) {
-      if (this.getVariableName(col) === varName) {
-        return col;
+    const { numVariables, numSlack, numSurplus, numArtificial } = this.problemData
+    
+    if (varName.startsWith('x')) {
+      // Decision variables: x1, x2, ...
+      const num = parseInt(varName.substring(1))
+      return num - 1
+    } else if (varName.startsWith('s')) {
+      // Slack/Surplus variables: s1, s2, ...
+      const num = parseInt(varName.substring(1))
+      return numVariables + num - 1
+    } else if (varName.startsWith('a')) {
+      // Artificial variables: a1, a2, ...
+      const num = parseInt(varName.substring(1))
+      return numVariables + numSlack + numSurplus + num - 1
+    }
+    
+    return -1
+  }
+
+  // Membuat nama variabel: x1..xn, s1.., a1..
+  getVariableName(index) {
+    const { numVariables, numSlack, numSurplus } = this.problemData
+    
+    if (index < numVariables) {
+      return `x${index + 1}`
+    } else if (index < numVariables + numSlack + numSurplus) {
+      return `s${index - numVariables + 1}`
+    } else {
+      return `a${index - numVariables - numSlack - numSurplus + 1}`
+    }
+  }
+
+  // Inisialisasi tableau (termasuk variabel slack, surplus, artifisial)
+// File: BaseSimplex.js (di dalam class BaseSimplex)
+
+initializeTableau() {
+  const {
+    objectiveCoefficients,
+    constraints,
+    numVariables,
+    objectiveType
+  } = this.problemData;
+
+  // Hitung jumlah slack, surplus, artifisial
+  let slackCount = 0, surplusCount = 0, artificialCount = 0;
+  constraints.forEach(c => {
+    if (c.sign === '≤') slackCount++;
+    else if (c.sign === '≥') { surplusCount++; artificialCount++; }
+    else if (c.sign === '=') artificialCount++;
+  });
+  this.problemData.numSlack = slackCount;
+  this.problemData.numSurplus = surplusCount;
+  this.problemData.numArtificial = artificialCount;
+
+  const totalVars = numVariables + slackCount + surplusCount + artificialCount;
+  this.tableau = [];
+  this.basicVariables = [];
+
+  // Posisi awal kolom tambahan
+  let idxSlack     = numVariables;
+  let idxSurplus   = numVariables + slackCount;
+  let idxArtificial= numVariables + slackCount + surplusCount;
+
+  // 1) Buat baris-baris constraint
+  constraints.forEach(c => {
+    const row = Array(totalVars + 1).fill(0);
+    // a) Koefisien keputusan
+    c.coeffs.forEach((v, j) => (row[j] = v));
+    // b) Slack/Surplus/Artifisial
+    if (c.sign === '≤') {
+      row[idxSlack] = 1;
+      this.basicVariables.push(this.getVariableName(idxSlack));
+      idxSlack++;
+    } else if (c.sign === '≥') {
+      row[idxSurplus]   = -1;
+      row[idxArtificial]=  1;
+      this.basicVariables.push(this.getVariableName(idxArtificial));
+      idxSurplus++; idxArtificial++;
+    } else { // =
+      row[idxArtificial] = 1;
+      this.basicVariables.push(this.getVariableName(idxArtificial));
+      idxArtificial++;
+    }
+    // c) RHS
+    row[totalVars] = c.rhs;
+    this.tableau.push(row);
+  });
+
+  // 2) Baris fungsi tujuan (Big-M)
+  const objRow = Array(totalVars + 1).fill(0);
+  objectiveCoefficients.forEach((c, j) => (objRow[j] = c));
+  const artStart = numVariables + slackCount + surplusCount;
+  for (let k = 0; k < artificialCount; k++) {
+    objRow[artStart + k] = -this.M;
+  }
+  objRow[totalVars] = 0;
+  this.tableau.push(objRow);
+
+  // 3) Koreksi Big-M untuk artifisial di basis
+  //    sehingga kolom a* menjadi nol di baris tujuan
+  for (let i = 0; i < this.tableau.length - 1; i++) {
+    const bv = this.basicVariables[i];
+    if (bv.startsWith('a')) {
+      const col   = this.getIndexOfVar(bv);
+      const factor= this.M;
+      for (let j = 0; j < this.tableau[i].length; j++) {
+        this.tableau[this.tableau.length - 1][j] +=
+          factor * this.tableau[i][j];
       }
     }
-    return -1;
   }
+}
+
 
   // Log setiap step untuk keperluan visualisasi
   logStep(description, pivotCol, pivotRow, enteringVar, leavingVar) {
