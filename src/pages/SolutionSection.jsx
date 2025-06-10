@@ -184,9 +184,9 @@ const renderProblemFormulation = () => {
 
   // 5. Helper untuk mendapatkan simbol operator yang benar
   const getOperatorSymbol = (sign) => {
-    if (sign === '<=') return '≤';
-    if (sign === '>=') return '≥';
-    return '≤';
+    if (sign === '≤') return '≤';
+    if (sign === '≥') return '≥'; 
+    return '=';
   };
 
   // 6. Render komponen JSX
