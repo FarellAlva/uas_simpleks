@@ -140,148 +140,209 @@ export default function SolutionSection({ solutionData }) {
       );
   };
   
-  // Komponen untuk merender formulasi masalah dalam bentuk standar
- // [PERBAIKAN] Komponen untuk merender formulasi masalah secara akurat
 const renderProblemFormulation = () => {
-  // 1. Pemeriksaan awal, jangan render jika data tidak ada
-  if (!solutionData || !solutionData.originalObjectiveCoefficients) return null;
+    // Guard clause: Pastikan data yang dibutuhkan ada, termasuk `steps` untuk bentuk standar.
+    if (!solutionData || !solutionData.originalObjectiveCoefficients || !solutionData.steps || !solutionData.steps[0]) {
+        return null;
+    }
 
-  // 2. Ambil semua data yang dibutuhkan dari props
-  const { 
-    objectiveType, 
-    originalObjectiveCoefficients, 
-    numVariables, 
-    constraints, 
-    originalConstraints // Gunakan data asli jika ada
-  } = solutionData;
+    const { 
+        objectiveType, 
+        originalObjectiveCoefficients, 
+        numVariables, 
+        // Ambil jumlah slack/surplus variables dari solutionData
+        numSlack,
+        numSurplus,
+    } = solutionData;
 
-  // 3. Tentukan apakah kita punya data asli atau hanya data standar
-  const hasOriginalData = originalConstraints && originalConstraints.length > 0;
-  const constraintsToRender = hasOriginalData ? originalConstraints : constraints;
+    // [MODIFIKASI KUNCI 1: SUMBER DATA]
+    // Kita tidak lagi menggunakan `originalConstraints`. Sebagai gantinya, kita ambil data batasan 
+    // langsung dari tabel awal (iterasi 0), karena di sanalah bentuk standar (dengan variabel s) berada.
+    const standardFormConstraints = solutionData.steps[0].tableau.slice(0, -1); // Potong baris Z
+    const totalSVars = (numSlack || 0) + (numSurplus || 0);
 
-  // 4. Helper untuk membangun ekspresi matematika (contoh: 2x₁ - x₂)
-  const buildExpression = (coeffs) => {
-    const parts = coeffs.map((c, i) => {
-      if (c === 0) return null; // Abaikan variabel dengan koefisien 0
+    // [MODIFIKASI KUNCI 2: FUNGSI buildExpression]
+    // Fungsi ini diubah dari menggunakan `.map()` menjadi `for` loop
+    // agar bisa memproses variabel `x` dan `s` secara terpisah.
+    const buildExpression = (coeffs) => {
+        const parts = [];
 
-      const absCoeff = Math.abs(c);
-      // Jangan tampilkan angka '1' di depan variabel (kecuali jika itu konstanta)
-      const displayCoeff = (absCoeff === 1 && coeffs.length > 1) ? '' : absCoeff;
-      
-      const variable = `x${i + 1}`;
-
-      // Tentukan tanda operator (+ atau -)
-      if (i === 0) { // Variabel pertama
-        return c < 0 ? `-${displayCoeff}${variable}` : `${displayCoeff}${variable}`;
-      } else { // Variabel berikutnya
-        return c < 0 ? ` - ${displayCoeff}${variable}` : ` + ${displayCoeff}${variable}`;
-      }
-    });
+        // Bagian 1: Proses Variabel Keputusan (x1, x2, ...)
+        for (let i = 0; i < numVariables; i++) {
+            if (coeffs[i] !== 0) {
+                const c = coeffs[i];
+                const absCoeff = Math.abs(c);
+                const displayCoeff = (absCoeff === 1) ? '' : absCoeff;
+                const variable = `x${i + 1}`;
+                const sign = c < 0 ? ' - ' : ' + ';
+                parts.push(`${sign}${displayCoeff}${variable}`);
+            }
+        }
+        
+        // Bagian 2: Proses Variabel Slack/Surplus (s1, s2, ...)
+        for (let i = 0; i < totalSVars; i++) {
+            const coeffIndex = numVariables + i;
+            if (coeffs[coeffIndex] && coeffs[coeffIndex] !== 0) {
+                const c = coeffs[coeffIndex];
+                const absCoeff = Math.abs(c);
+                const displayCoeff = absCoeff === 1 ? '' : absCoeff;
+                const variable = `s${i + 1}`;
+                const sign = c < 0 ? ' - ' : ' + ';
+                parts.push(`${sign}${displayCoeff}${variable}`);
+            }
+        }
+        
+        // Gabungkan dan rapikan string hasil akhir
+        let result = parts.join('').trim();
+        if (result.startsWith('+')) {
+            result = result.substring(1).trim();
+        }
+        return result;
+    };
     
-    // Gabungkan semua bagian yang tidak null
-    return parts.filter(p => p !== null).join('');
-  };
+    // Fungsi ini dipertahankan sesuai permintaan Anda.
+    const getOperatorSymbol = (sign) => {
+        if (sign === '≤') return '≤';
+        if (sign === '≥') return '≥'; 
+        if (sign === '=') return '='; 
+        return '≥';
+    };
 
-  // 5. Helper untuk mendapatkan simbol operator yang benar
-  const getOperatorSymbol = (sign) => {
-    if (sign === '≤') return '≤';
-    if (sign === '≥') return '≥'; 
-    return '=';
-  };
+    // Fungsi tambahan untuk memformat fungsi tujuan menjadi Z - ... = 0
+    const buildStandardObjective = () => {
+        const parts = originalObjectiveCoefficients.map((c, i) => {
+            if (c === 0) return '';
+            // Pindahkan semua ke sisi kiri, sehingga menjadi negatif
+            return ` - ${c}x${i + 1}`;
+        });
+        return `Z${parts.join('')} = 0`;
+    };
 
-  // 6. Render komponen JSX
-  return (
-    <div style={{
-      backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px',
-      border: '1px solid #dee2e6', marginBottom: '20px', fontFamily: 'monospace'
-    }}>
-      <h4 style={{ margin: '0 0 15px 0', color: '#495057', fontSize: '16px', fontWeight: 'bold' }}>
-        📝 Formulasi Masalah {hasOriginalData ? 'Asli' : '(Bentuk Standar)'}
-      </h4>
-      
-      <div style={{ marginBottom: '15px', fontSize: '16px' }}>
-        <span style={{ fontWeight: 'bold' }}>
-          {objectiveType === 'min' ? 'Minimize' : 'Maximize'}: 
-        </span>
-        <span> Z = {buildExpression(originalObjectiveCoefficients)}</span>
-      </div>
-
-      <div>
-        <span style={{ fontWeight: 'bold' }}>Subject to:</span>
-        <div style={{ marginLeft: '20px', marginTop: '8px', fontSize: '15px' }}>
-          {constraintsToRender.map((constraint, index) => (
-            <div key={index} style={{ marginBottom: '8px' }}>
-              {/* Gunakan helper untuk menampilkan ekspresi dan operator */}
-              {buildExpression(constraint.coeffs)} {getOperatorSymbol(constraint.sign)} {constraint.rhs}
+    return (
+        <div style={{
+            backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '8px',
+            border: '1px solid #dee2e6', marginBottom: '20px', fontFamily: 'monospace'
+        }}>
+            <h4 style={{ margin: '0 0 15px 0', color: '#495057', fontSize: '16px', fontWeight: 'bold' }}>
+                {/* Judul diubah agar selalu menampilkan 'Bentuk Standar' */}
+                📝 Formulasi Masalah (Bentuk Standar)
+            </h4>
+            
+            <div style={{ marginBottom: '15px', fontSize: '16px' }}>
+                <span style={{ fontWeight: 'bold' }}>
+                    {objectiveType === 'min' ? 'Minimize' : 'Maximize'}: 
+                </span>
+                {/* [MODIFIKASI] Gunakan fungsi baru untuk format Z - ... = 0 */}
+                <span> {buildStandardObjective()}</span>
             </div>
-          ))}
-           <div style={{ marginTop: '10px', color: '#6c757d' }}>
-            {Array.from({ length: numVariables }, (_, i) => `x${i + 1}`).join(', ')} ≥ 0
-          </div>
+
+            <div>
+                <span style={{ fontWeight: 'bold' }}>Subject to:</span>
+                <div style={{ marginLeft: '20px', marginTop: '8px', fontSize: '15px' }}>
+                  
+                    {standardFormConstraints.map((row, index) => (
+                      <div key={index} style={{ marginBottom: '8px' }}>
+                        {/* Ambil operator asli dari solutionData.constraints jika ada, fallback ke '=' */}
+                        {buildExpression(row)} {getOperatorSymbol(solutionData.constraints && solutionData.constraints[index] ? solutionData.constraints[index].sign : '=')} {row[row.length - 1]}
+                      </div>
+                    ))}
+                    <div style={{ marginTop: '10px', color: '#6c757d' }}>
+                     
+                        {Array.from({ length: numVariables }, (_, i) => `x${i + 1}`).join(', ')}, 
+                        {Array.from({ length: totalSVars }, (_, i) => `s${i + 1}`).join(', ')} ≥ 0
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
   
-  // Komponen untuk merender tabel simpleks
+  // [MODIFIKASI] Komponen untuk merender tabel simpleks dengan header yang dinamis dan jelas
   const renderTableau = (tableau, basicVars, pivotRow, pivotCol, stepIndex = null, isCurrent = false) => {
     if (!tableau || tableau.length === 0) return null;
 
-    const headers = [];
-    if (solutionData) {
-      for (let i = 1; i <= solutionData.numVariables; i++) headers.push(`x${i}`);
-      for (let i = 1; i <= (solutionData.numSlack || 0); i++) headers.push(`s${i}`);
-      for (let i = 1; i <= (solutionData.numArtificial || 0); i++) headers.push(`a${i}`);
+    // --- Logika Pembuatan Header Tabel ---
+    // Header dibuat secara dinamis berdasarkan properti dari objek `solutionData`.
+    // Pastikan `solutionData` berisi `numVariables` dan `numSlack` yang benar.
+   const headers = [];
+if (solutionData) {
+    const numDecisionVars = solutionData.numVariables || 0;
+    // [MODIFIKASI] Ambil jumlah variabel slack DAN surplus
+    const numSlackVars = solutionData.numSlack || 0;
+    const numSurplusVars = solutionData.numSurplus || 0;
+    // [MODIFIKASI] Jumlahkan keduanya untuk mendapatkan total variabel 's'
+    const totalSVars = numSlackVars + numSurplusVars;
+    const numArtificialVars = solutionData.numArtificial || 0;
+
+    // 1. Tambahkan header untuk variabel keputusan (misal: x1, x2, x3)
+    for (let i = 1; i <= numDecisionVars; i++) {
+        headers.push(`x${i}`);
     }
+
+    // 2. [MODIFIKASI] Loop ini sekarang membuat header untuk SEMUA variabel 's'
+    // Baik dari slack (<=) maupun surplus (>=)
+    for (let i = 1; i <= totalSVars; i++) {
+        headers.push(`s${i}`);
+    }
+
+    // 3. Tambahkan header untuk variabel artifisial (jika ada)
+    for (let i = 1; i <= numArtificialVars; i++) {
+        headers.push(`a${i}`);
+    }
+}
+    // 4. Selalu tambahkan kolom Nilai Kanan (RHS) di bagian akhir
     headers.push('RHS');
 
+    // --- Render Komponen JSX ---
     return (
-      <div style={{ marginBottom: '30px', border: '1px solid #dee2e6', borderRadius: '8px', overflow: 'hidden' }}>
-        {isExpanded && (
-          <div style={{
-            backgroundColor: isCurrent ? '#e3f2fd' : '#f8f9fa', padding: '10px 15px', borderBottom: '1px solid #dee2e6',
-            fontWeight: 'bold', color: isCurrent ? '#1976d2' : '#495057'
-          }}>
-            Tabel untuk Iterasi {stepIndex}
-          </div>
-        )}
-        <div style={{overflowX: 'auto'}}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', backgroundColor: 'white' }}>
-            <thead>
-              <tr style={{backgroundColor: '#f5f5f5'}}>
-                <th style={{ padding: '10px', borderBottom: '2px solid #ddd', fontWeight: 'bold', backgroundColor: '#fafafa' }}>Basis</th>
-                {headers.map((header, idx) => (
-                  <th key={idx} style={{
-                    padding: '10px', borderBottom: '2px solid #ddd', fontWeight: 'bold', textAlign: 'center',
-                    backgroundColor: idx === pivotCol ? '#ffeb3b' : 'inherit'
-                  }}>{header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tableau.map((row, rowIdx) => {
-                const isObjectiveRow = rowIdx === tableau.length - 1;
-                return (
-                  <tr key={rowIdx} style={{ backgroundColor: rowIdx === pivotRow ? '#e3f2fd' : isObjectiveRow ? '#fff3e0' : 'white' }}>
-                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold', backgroundColor: '#fafafa', textAlign: 'center' }}>
-                      {isObjectiveRow ? '-Z' : (basicVars ? basicVars[rowIdx] : `s${rowIdx + 1}`)}
-                    </td>
-                    {row.map((cell, cellIdx) => (
-                      <td key={cellIdx} style={{
-                        padding: '8px', borderBottom: '1px solid #eee', textAlign: 'center',
-                        backgroundColor: (rowIdx === pivotRow && cellIdx === pivotCol) ? '#ff5722' : (cellIdx === pivotCol ? '#fff3e0' : 'inherit'),
-                        color: (rowIdx === pivotRow && cellIdx === pivotCol) ? 'white' : 'inherit',
-                        fontWeight: (rowIdx === pivotRow && cellIdx === pivotCol) ? 'bold' : 'normal',
-                      }}>{formatNumber(cell)}</td>
-                    ))}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{ marginBottom: '30px', border: '1px solid #dee2e6', borderRadius: '8px', overflow: 'hidden' }}>
+            {isExpanded && (
+                <div style={{
+                    backgroundColor: isCurrent ? '#e3f2fd' : '#f8f9fa', padding: '10px 15px', borderBottom: '1px solid #dee2e6',
+                    fontWeight: 'bold', color: isCurrent ? '#1976d2' : '#495057'
+                }}>
+                    Tabel untuk Iterasi {stepIndex}
+                </div>
+            )}
+            <div style={{overflowX: 'auto'}}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', backgroundColor: 'white' }}>
+                    <thead>
+                        <tr style={{backgroundColor: '#f5f5f5'}}>
+                            <th style={{ padding: '10px', borderBottom: '2px solid #ddd', fontWeight: 'bold', backgroundColor: '#fafafa' }}>Basis</th>
+                            
+                            {/* Render semua header yang telah dibuat secara dinamis */}
+                            {headers.map((header, idx) => (
+                                <th key={idx} style={{
+                                    padding: '10px', borderBottom: '2px solid #ddd', fontWeight: 'bold', textAlign: 'center',
+                                    // Sorot kolom pivot. `idx` di sini sesuai dengan indeks kolom pada data `tableau`.
+                                    backgroundColor: idx === pivotCol ? '#ffeb3b' : 'inherit'
+                                }}>{header}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tableau.map((row, rowIdx) => {
+                            const isObjectiveRow = rowIdx === tableau.length - 1;
+                            return (
+                                <tr key={rowIdx} style={{ backgroundColor: rowIdx === pivotRow ? '#e3f2fd' : isObjectiveRow ? '#fff3e0' : 'white' }}>
+                                    <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold', backgroundColor: '#fafafa', textAlign: 'center' }}>
+                                        {isObjectiveRow ? '-Z' : (basicVars ? basicVars[rowIdx] : `s${rowIdx + 1}`)}
+                                    </td>
+                                    {row.map((cell, cellIdx) => (
+                                        <td key={cellIdx} style={{
+                                            padding: '8px', borderBottom: '1px solid #eee', textAlign: 'center',
+                                            backgroundColor: (rowIdx === pivotRow && cellIdx === pivotCol) ? '#ff5722' : (cellIdx === pivotCol ? '#fff3e0' : 'inherit'),
+                                            color: (rowIdx === pivotRow && cellIdx === pivotCol) ? 'white' : 'inherit',
+                                            fontWeight: (rowIdx === pivotRow && cellIdx === pivotCol) ? 'bold' : 'normal',
+                                        }}>{formatNumber(cell)}</td>
+                                    ))}
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
     );
   };
 
@@ -360,7 +421,6 @@ const renderProblemFormulation = () => {
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          {/* Previous Button */}
           <button 
             onClick={handlePrevStep} 
             disabled={currentStep === 0}
@@ -370,26 +430,11 @@ const renderProblemFormulation = () => {
               color: currentStep === 0 ? '#94a3b8' : 'white',
               border: 'none', borderRadius: '10px', fontWeight: '600',
               cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              fontSize: '14px'
-            }}
-            onMouseEnter={(e) => {
-              if (currentStep !== 0) {
-                e.target.style.backgroundColor = '#2563eb';
-                e.target.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentStep !== 0) {
-                e.target.style.backgroundColor = '#3b82f6';
-                e.target.style.transform = 'translateY(0)';
-              }
-            }}
-          >
+              transition: 'all 0.2s ease', fontSize: '14px'
+            }}>
             <span>◀</span> Previous
           </button>
 
-          {/* Step Counter */}
           <div style={{ 
             padding: '12px 24px', backgroundColor: '#f8fafc', 
             borderRadius: '12px', fontWeight: '700', color: '#1e293b',
@@ -400,7 +445,6 @@ const renderProblemFormulation = () => {
             <span>{solutionData.steps.length}</span>
           </div>
 
-          {/* Next Button */}
           <button 
             onClick={handleNextStep} 
             disabled={currentStep >= solutionData.steps.length - 1}
@@ -411,55 +455,9 @@ const renderProblemFormulation = () => {
               color: currentStep >= solutionData.steps.length - 1 ? '#94a3b8' : 'white',
               border: 'none', borderRadius: '10px', fontWeight: '600',
               cursor: currentStep >= solutionData.steps.length - 1 ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              fontSize: '14px'
-            }}
-            onMouseEnter={(e) => {
-              if (currentStep < solutionData.steps.length - 1) {
-                e.target.style.backgroundColor = '#2563eb';
-                e.target.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentStep < solutionData.steps.length - 1) {
-                e.target.style.backgroundColor = '#3b82f6';
-                e.target.style.transform = 'translateY(0)';
-              }
-            }}
-          >
-            Next <span>▶</span>
-          </button>
-
-          {/* Divider */}
-          <div style={{width: '2px', height: '32px', backgroundColor: '#e2e8f0', margin: '0 8px'}} />
-
-          {/* Auto Play Button */}
-          <button 
-            onClick={handlePlayAnimation} 
-            disabled={isPlaying}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '12px 20px', 
-              backgroundColor: isPlaying ? '#f59e0b' : '#10b981',
-              color: 'white', border: 'none', borderRadius: '10px', 
-              fontWeight: '600', cursor: isPlaying ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease', fontSize: '14px'
-            }}
-            onMouseEnter={(e) => {
-              if (!isPlaying) {
-                e.target.style.backgroundColor = '#059669';
-                e.target.style.transform = 'translateY(-1px)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isPlaying) {
-                e.target.style.backgroundColor = '#10b981';
-                e.target.style.transform = 'translateY(0)';
-              }
-            }}
-          >
-            <span>{isPlaying ? '⏸️' : '▶️'}</span>
-            {isPlaying ? 'Playing...' : 'Auto Play'}
+            }}>
+            Next <span>▶</span>
           </button>
         </div>
       </div>
@@ -524,10 +522,8 @@ const renderProblemFormulation = () => {
                         <RenderStepExplanation stepData={step} previousStepData={index > 0 ? solutionData.steps[index - 1] : null} />
                         {renderTableau(step.tableau, step.basicVariables, step.pivotRow, step.pivotColumn, step.iteration, currentStep === index)}
                         
-                        {/* Detail iterasi untuk setiap langkah */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px', marginBottom: '30px' }}>
                           {renderIterationDetails(step)}
-                          {/* Tampilkan solusi optimal hanya pada langkah terakhir */}
                           {index === solutionData.steps.length - 1 && solutionData.isOptimal && renderOptimalSolution()}
                         </div>
                       </div>
@@ -550,16 +546,13 @@ const renderProblemFormulation = () => {
               )}
             </div>
             
-            {/* Navigation controls */}
             {renderNavigationControls()}
             
           </div>
 
-          {/* Detail iterasi dan solusi untuk tampilan langkah tunggal */}
           {!isExpanded && solutionData && solutionData.steps && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '30px' }}>
               {renderIterationDetails(currentStepData)}
-              {/* Tampilkan solusi optimal hanya jika sudah optimal */}
               {solutionData.isOptimal && renderOptimalSolution()}
             </div>
           )}
