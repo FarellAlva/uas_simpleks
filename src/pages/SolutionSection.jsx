@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function SolutionSection({ solutionData }) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -25,24 +25,6 @@ export default function SolutionSection({ solutionData }) {
     if (solutionData && currentStep < solutionData.steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
-  };
-
-  const handlePlayAnimation = () => {
-    if (!solutionData || !solutionData.steps) return;
-    
-    setIsPlaying(true);
-    setCurrentStep(0);
-    
-    const interval = setInterval(() => {
-      setCurrentStep(prev => {
-        if (prev >= solutionData.steps.length - 1) {
-          clearInterval(interval);
-          setIsPlaying(false);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 4000); // Durasi per langkah
   };
 
   // Fungsi utilitas untuk memformat angka
